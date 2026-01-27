@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { serve, file, write } from "bun";
 
 const PORT = parseInt(process.env.PORT || "7243");

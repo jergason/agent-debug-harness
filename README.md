@@ -12,21 +12,34 @@ A lightweight, standalone debug logging server that AI coding agents can spin up
 
 ## Installation
 
+### As a Claude Code Skill (Recommended)
+
+Clone into your Claude Code skills directory:
+
 ```bash
-# Clone the repository
+cd ~/.claude/skills  # or wherever your skills live
+git clone https://github.com/yourusername/agent-debug-harness.git debug-harness
+```
+
+The skill is self-contained - Claude Code resolves paths automatically from the skill directory.
+
+### Standalone Usage
+
+```bash
 git clone https://github.com/yourusername/agent-debug-harness.git
 cd agent-debug-harness
-
-# Or just copy the single file - it's self-contained
+bun run src/index.ts
 ```
+
+Requires [Bun](https://bun.sh) runtime (v1.0.0+).
 
 ## Quick Start
 
 ```bash
-# Start the server
+# From the repo directory
 bun run src/index.ts
 
-# Or with custom port/log file
+# With custom port/log file
 PORT=8080 LOG_FILE=./my-debug.log bun run src/index.ts
 ```
 
@@ -45,9 +58,8 @@ PORT=8080 LOG_FILE=./my-debug.log bun run src/index.ts
 ### 1. Start the harness (in background)
 
 ```bash
-bun run /path/to/agent-debug-harness/src/index.ts &
-DEBUG_PID=$!
-echo $DEBUG_PID > /tmp/debug-harness.pid
+bun run src/index.ts &
+echo $! > /tmp/debug-harness.pid
 ```
 
 ### 2. Inject logging calls into source code
