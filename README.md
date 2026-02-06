@@ -1,14 +1,6 @@
 # Agent Debug Harness
 
-A lightweight, standalone debug logging server that AI coding agents can spin up, inject logs into, and tear down during debugging sessions. Inspired by Cursor IDE's Debug Mode.
-
-## Features
-
-- **Zero dependencies** - Uses Bun's built-in HTTP server
-- **Fast startup** - Ready in milliseconds
-- **NDJSON output** - Each log line is valid JSON for easy parsing
-- **Session support** - Group logs by session ID
-- **Simple API** - Just `fetch()` to log
+Like Cursor's Debug Mode, but for Claude Code. Starts a local HTTP server, adds instrumentation to code that calls this server to log debug info, reads logs in to observe what is going on.
 
 ## Installation
 
@@ -18,18 +10,10 @@ Clone into your Claude Code skills directory:
 
 ```bash
 cd ~/.claude/skills  # or wherever your skills live
-git clone https://github.com/yourusername/agent-debug-harness.git debug-harness
+git clone https://github.com/jergason/agent-debug-harness.git debugging-trace-execution
 ```
 
 The skill is self-contained - Claude Code resolves paths automatically from the skill directory.
-
-### Standalone Usage
-
-```bash
-git clone https://github.com/yourusername/agent-debug-harness.git
-cd agent-debug-harness
-bun run src/index.ts
-```
 
 Requires [Bun](https://bun.sh) runtime (v1.0.0+).
 
@@ -45,13 +29,13 @@ PORT=8080 LOG_FILE=./my-debug.log bun run src/index.ts
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check - returns "OK" |
-| `POST` | `/log` | Append JSON to log file |
+| Method | Path              | Description                       |
+| ------ | ----------------- | --------------------------------- |
+| `GET`  | `/health`         | Health check - returns "OK"       |
+| `POST` | `/log`            | Append JSON to log file           |
 | `POST` | `/log/:sessionId` | Append JSON with session grouping |
-| `GET` | `/logs` | Return all logs as JSON array |
-| `POST` | `/reset` | Clear the log file |
+| `GET`  | `/logs`           | Return all logs as JSON array     |
+| `POST` | `/reset`          | Clear the log file                |
 
 ## Agent Workflow
 
@@ -68,18 +52,18 @@ Add temporary fetch calls to the code you're debugging:
 
 ```typescript
 // #region agent-debug
-fetch('http://127.0.0.1:7243/log', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+fetch("http://127.0.0.1:7243/log", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    location: 'myFile.ts:myFunction:entry',
-    message: 'Starting process',
+    location: "myFile.ts:myFunction:entry",
+    message: "Starting process",
     data: { userId, action },
     timestamp: Date.now(),
-    sessionId: 'debug-session-1',
-    hypothesisId: 'H1,H2'
-  })
-}).catch(() => {})
+    sessionId: "debug-session-1",
+    hypothesisId: "H1,H2",
+  }),
+}).catch(() => {});
 // #endregion
 ```
 
@@ -122,10 +106,18 @@ Search for `#region agent-debug` and remove those blocks.
 Each line in the log file is a JSON object (NDJSON format):
 
 ```json
-{"location":"file.ts:function:stage","message":"Description","data":{"key":"value"},"timestamp":1234567890,"sessionId":"abc123","hypothesisId":"H1,H2"}
+{
+  "location": "file.ts:function:stage",
+  "message": "Description",
+  "data": { "key": "value" },
+  "timestamp": 1234567890,
+  "sessionId": "abc123",
+  "hypothesisId": "H1,H2"
+}
 ```
 
 **Fields:**
+
 - `timestamp` (auto-added if missing) - Unix timestamp in milliseconds
 - `location` (optional) - Where in code: `file:function:stage`
 - `message` (optional) - Human-readable description
@@ -135,10 +127,10 @@ Each line in the log file is a JSON object (NDJSON format):
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `7243` | Server port (7243 conflicts with Cursor IDE) |
-| `LOG_FILE` | `/tmp/agent-debug.log` | Path to NDJSON log file |
+| Variable   | Default                | Description                                  |
+| ---------- | ---------------------- | -------------------------------------------- |
+| `PORT`     | `7243`                 | Server port (7243 conflicts with Cursor IDE) |
+| `LOG_FILE` | `/tmp/agent-debug.log` | Path to NDJSON log file                      |
 
 ## Examples
 

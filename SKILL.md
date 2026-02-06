@@ -1,9 +1,10 @@
 ---
-name: debug
-description: Use for debugging complex runtime issues by injecting temporary logging to trace execution and examine variables, state, etc. Activates when debugging behavior that's hard to trace with static analysis.
+name: debugging-tracing-execution
+description: Debug complex runtime issues by injecting temporary logging to trace execution and examine variables, state, etc. Use when you need to examine the run-time behavior of code, not just look at the code.
+allowed-tools: Bash(bun *), Bash(curl http://127.0.0.1:7243/health), Write, Bash(jq *)
 ---
 
-# Agent Debug Harness
+# Debugging By Tracing Execution
 
 A lightweight HTTP server for collecting debug logs during debugging sessions. Useful for client or server-side debugging.
 
@@ -11,14 +12,21 @@ A lightweight HTTP server for collecting debug logs during debugging sessions. U
 
 Use this tool when:
 
+- Debugging complex runtime issues
 - Static code analysis isn't revealing the issue
 - You need to trace runtime behavior across multiple functions
 - You want to test specific hypotheses about code execution
-- Console.log would clutter the codebase or output
 
 ## Hypothesis-Driven Debugging Workflow
 
-**IMPORTANT**: Always form hypotheses BEFORE instrumenting code.
+1. Form hypotheses
+2. Start the harness
+3. Inject strategic logs
+4. Ask the user to trigger the behavior
+5. Curl the log server to analyze results
+6. Update hypotheses and repeat as needed
+
+**IMPORTANT**: Form hypotheses BEFORE instrumenting code.
 
 ### Step 1: Form Hypotheses
 
@@ -35,20 +43,27 @@ bun run src/index.ts &
 echo $! > /tmp/debug-harness.pid
 ```
 
+#### With custom port/log file
+
+```bash
+PORT=8080 LOG_FILE=./my-debug.log bun run src/index.ts &
+echo $! > /tmp/debug-harness.pid
+```
+
 Verify it's running: `curl http://127.0.0.1:7243/health`
-
-**Environment variables:**
-
-- `PORT` - Server port (default: 7243)
-- `LOG_FILE` - Log file path (default: /tmp/agent-debug.log)
 
 ### Step 3: Inject Strategic Logs
 
-Add temporary fetch calls at key points. Always include:
+Add temporary HTTP requests at key points. Always include:
 
+- surrounding `#region agent-debug` and `#endregion` comments
 - `location`: file:function:stage (e.g., "auth.ts:login:entry")
 - `hypothesisId`: Which hypothesis this tests (e.g., "H1" or "H1,H2")
 - `data`: Relevant runtime values
+
+Optionally include a `sessionId` to group related logs if you have a shared ID available.
+
+Use the default http client for the languge you're using. Avoid dependencies.
 
 ```typescript
 // #region agent-debug
@@ -68,9 +83,11 @@ fetch("http://127.0.0.1:7243/log", {
 
 ### Step 4: Trigger the Behavior
 
-Run the code/tests that reproduce the issue.
+Ask the user to trigger the behavior that reproduces the issue.
 
 ### Step 5: Analyze Results
+
+Fetch logs from the server and analyze them.
 
 ```bash
 curl -s http://127.0.0.1:7243/logs | jq .
@@ -82,13 +99,17 @@ Look for:
 - Unexpected values or missing logs (code path not taken)
 - Timing patterns
 
-### Step 6: Reset Between Runs
+### Step 6: Update Hypotheses and Iterate
+
+Using what you learned, update your hypotheses and repeat the process. Add new logs if needed to test new hypotheses or clarify existing ones. If you have a solution, fix the code.
+
+Re-set the logs between runs to avoid confusion from old data:
 
 ```bash
 curl -X POST http://127.0.0.1:7243/reset
 ```
 
-### Step 7: Clean Up
+### After Debugging, Remove Debug Code And Stop Harness
 
 When done debugging:
 
